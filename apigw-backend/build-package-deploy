@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -e # Stop the execution of the script if it fails
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="SAM-DEPLOY"
+
+colorize() {
+  if [ "$1" == "$LABEL" ]; then
+    printf "${CYAN}== $1 ${NO_COLOR}\n"
+  else
+    printf "${CYAN} $1 ${NO_COLOR}\n"
+  fi
+}
+
+validate_variables() {
+  if [ -z "$TEMPLATE_FILE" ] || [ -z "$OUTPUT_TEMPLATE_FILE" ] || [ -z "$S3_BUCKET" ] || [ -z "$STACK_NAME" ] || [ -z "$BUILD_DIR" ] || [ -z "$FUNC_DIR" ]; then
+    colorize "Error: Missing required variables."
+    exit 1
+  fi
+}
+
+build() {
+  colorize "Building and compiling the TypeScript Lambda function..."
+  cd "$FUNC_DIR"
+  npm install
+  npm run build
+  cd -
+}
+
+validate() {
+  colorize "Validating the SAM template..."
+  sam validate --template-file "$TEMPLATE_FILE"
+}
+
+package() {
+  colorize "Packaging the application..."
+  sam package --template-file "$TEMPLATE_FILE" --output-template-file "$OUTPUT_TEMPLATE_FILE" --s3-bucket "$S3_BUCKET" --s3-prefix "$BUILD_DIR"
+}
+
+deploy() {
+  colorize "Deploying the application..."
+  sam deploy --template-file "$OUTPUT_TEMPLATE_FILE" --stack-name "$STACK_NAME" --capabilities CAPABILITY_IAM
+}
+
+colorize "$LABEL"
+
+# variables
+TEMPLATE_FILE="template.yaml"
+OUTPUT_TEMPLATE_FILE="packaged.yaml"
+S3_BUCKET=$S3_BUCKET_NAME
+STACK_NAME="apigw-backend-techtest-020424-stack"
+BUILD_DIR="build"
+FUNC_DIR="function"
+
+validate_variables
+
+colorize "Building..."
+build
+
+colorize "Validating..."
+validate
+
+colorize "Packaging..."
+package
+
+colorize "Deploying..."
+deploy
+
+colorize "Deployment completed successfully!"
