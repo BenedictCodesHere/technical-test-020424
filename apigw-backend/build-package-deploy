@@ -15,7 +15,7 @@ colorize() {
 }
 
 validate_variables() {
-  if [ -z "$TEMPLATE_FILE" ] || [ -z "$OUTPUT_TEMPLATE_FILE" ] || [ -z "$S3_BUCKET" ] || [ -z "$STACK_NAME" ] || [ -z "$BUILD_DIR" ] || [ -z "$FUNC_DIR" ]; then
+  if [ -z "$TEMPLATE_FILE" ] || [ -z "$OUTPUT_TEMPLATE_FILE" ] || [ -z "$S3_BUCKET_NAME" ] || [ -z "$STACK_NAME" ] || [ -z "$BUILD_DIR" ] || [ -z "$FUNC_DIR" ]; then
     colorize "Error: Missing required variables."
     exit 1
   fi
@@ -49,7 +49,7 @@ colorize "$LABEL"
 # variables
 TEMPLATE_FILE="template.yaml"
 OUTPUT_TEMPLATE_FILE="packaged.yaml"
-S3_BUCKET=$S3_BUCKET_NAME
+S3_BUCKET_NAME=$S3_BUCKET_NAME
 STACK_NAME="apigw-backend-techtest-020424-stack"
 BUILD_DIR="build"
 FUNC_DIR="function"
