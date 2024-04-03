@@ -11,7 +11,15 @@ Also, note that the TABLE_NAME environment variable is assumed to be set with th
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
 
-const tableName = process.env.TABLE_NAME;
+function getEnvVariable(name: string): string {
+    const value = process.env[name];
+    if (value === undefined) {
+      throw new Error(`Environment variable ${name} is not defined`);
+    }
+    return value;
+  }
+  
+const tableName = getEnvVariable("TABLE_NAME");
 const dynamoDb = new DynamoDB.DocumentClient();
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {

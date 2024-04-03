@@ -11,7 +11,14 @@ Also, note that the TABLE_NAME environment variable is assumed to be set with th
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handler = void 0;
 const aws_sdk_1 = require("aws-sdk");
-const tableName = process.env.TABLE_NAME;
+function getEnvVariable(name) {
+    const value = process.env[name];
+    if (value === undefined) {
+        throw new Error(`Environment variable ${name} is not defined`);
+    }
+    return value;
+}
+const tableName = getEnvVariable("TABLE_NAME");
 const dynamoDb = new aws_sdk_1.DynamoDB.DocumentClient();
 const handler = async (event) => {
     const method = event.httpMethod;
