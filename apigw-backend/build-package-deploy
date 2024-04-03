@@ -31,17 +31,17 @@ build() {
 
 validate() {
   colorize "Validating the SAM template..."
-  sam validate --template-file "$TEMPLATE_FILE"
+  sam validate --template-file "$TEMPLATE_FILE" --region "$AWS_REGION"
 }
 
 package() {
   colorize "Packaging the application..."
-  sam package --template-file "$TEMPLATE_FILE" --output-template-file "$OUTPUT_TEMPLATE_FILE" --s3-bucket "$S3_BUCKET" --s3-prefix "$BUILD_DIR"
+  sam package --template-file "$TEMPLATE_FILE" --output-template-file "$OUTPUT_TEMPLATE_FILE" --s3-bucket "$S3_BUCKET" --s3-prefix "$BUILD_DIR" --region "$AWS_REGION"
 }
 
 deploy() {
   colorize "Deploying the application..."
-  sam deploy --template-file "$OUTPUT_TEMPLATE_FILE" --stack-name "$STACK_NAME" --capabilities CAPABILITY_IAM
+  sam deploy --template-file "$OUTPUT_TEMPLATE_FILE" --stack-name "$STACK_NAME" --capabilities CAPABILITY_IAM --region "$AWS_REGION"
 }
 
 colorize "$LABEL"
@@ -53,6 +53,7 @@ S3_BUCKET=$S3_BUCKET_NAME
 STACK_NAME="apigw-backend-techtest-020424-stack"
 BUILD_DIR="build"
 FUNC_DIR="function"
+AWS_REGION=$AWS_REGION
 
 validate_variables
 

@@ -1,103 +1,112 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-
 Parameters:
   TableName:
     Type: String
     Default: techtest-table-020424
-
 Resources:
-  Techtest-020424-Api:
+  Techtest020424Api:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
       DefinitionBody:
-        swagger: "2.0"
+        swagger: '2.0'
         paths:
           /items:
             get:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
           /items/{id}:
             get:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
             put:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
             delete:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
-
-  Techtest-020424-Table:
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: Techtest020424Api
+  Techtest020424Table:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Ref TableName
+      TableName:
+        Ref: TableName
       AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
+      - AttributeName: id
+        AttributeType: S
       KeySchema:
-        - AttributeName: id
-          KeyType: HASH
+      - AttributeName: id
+        KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
-
+    Metadata:
+      SamResourceId: Techtest020424Table
   CrudFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/
+      CodeUri: s3://techtest-020424/build/7a6bedbe852b911dfc23be23d19b65aa
       Handler: index.handler
-      Runtime: nodejs14.x
+      Runtime: nodejs20.x
       Events:
         GetItems:
           Type: Api
           Properties:
             Path: /items
             Method: get
-            RestApiId: !Ref MyApi
+            RestApiId:
+              Ref: Techtest020424Api
         CreateItem:
           Type: Api
           Properties:
             Path: /items
             Method: post
-            RestApiId: !Ref MyApi
+            RestApiId:
+              Ref: Techtest020424Api
         GetItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: get
-            RestApiId: !Ref MyApi
+            RestApiId:
+              Ref: Techtest020424Api
         UpdateItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: put
-            RestApiId: !Ref MyApi
+            RestApiId:
+              Ref: Techtest020424Api
         DeleteItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: delete
-            RestApiId: !Ref MyApi
+            RestApiId:
+              Ref: Techtest020424Api
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Techtest-020424-Table
-
-
-# This template uses AWS SAM to define a serverless API with CRUD endpoints integrating with Lambda functions and a DynamoDB table. 
-# The Lambda functions are assumed to be written in TypeScript and compiled to JavaScript.
-# The necessary IAM roles and permissions are assigned to the Lambda functions using the DynamoDBReadPolicy and DynamoDBCrudPolicy SAM policy templates.
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: Techtest020424Table
+    Metadata:
+      SamResourceId: CrudFunction

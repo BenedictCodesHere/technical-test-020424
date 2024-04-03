@@ -7,7 +7,7 @@ Parameters:
     Default: techtest-table-020424
 
 Resources:
-  Techtest-020424-Api:
+  Techtest020424Api:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
@@ -42,7 +42,7 @@ Resources:
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
 
-  Techtest-020424-Table:
+  Techtest020424Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Ref TableName
@@ -61,41 +61,41 @@ Resources:
     Properties:
       CodeUri: function/
       Handler: index.handler
-      Runtime: nodejs14.x
+      Runtime: nodejs20.x
       Events:
         GetItems:
           Type: Api
           Properties:
             Path: /items
             Method: get
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Techtest020424Api
         CreateItem:
           Type: Api
           Properties:
             Path: /items
             Method: post
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Techtest020424Api
         GetItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: get
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Techtest020424Api
         UpdateItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: put
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Techtest020424Api
         DeleteItem:
           Type: Api
           Properties:
             Path: /items/{id}
             Method: delete
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Techtest020424Api
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref Techtest-020424-Table
+            TableName: !Ref Techtest020424Table
 
 
 # This template uses AWS SAM to define a serverless API with CRUD endpoints integrating with Lambda functions and a DynamoDB table. 
