@@ -66,8 +66,12 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: s3://techtest-020424/build/7a6bedbe852b911dfc23be23d19b65aa
-      Handler: index.handler
+      Handler: dist/index.handler
       Runtime: nodejs20.x
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: TableName
       Events:
         GetItems:
           Type: Api
@@ -110,3 +114,22 @@ Resources:
             Ref: Techtest020424Table
     Metadata:
       SamResourceId: CrudFunction
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${Techtest020424Api}.execute-api.${AWS::Region}.amazonaws.com/prod/
+  ApiId:
+    Description: API Gateway ID
+    Value:
+      Ref: Techtest020424Api
+  LambdaFunctionArn:
+    Description: Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - CrudFunction
+      - Arn
+  DynamoDBTableName:
+    Description: DynamoDB Table Name
+    Value:
+      Ref: Techtest020424Table

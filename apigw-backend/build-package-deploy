@@ -36,7 +36,7 @@ validate() {
 
 package() {
   colorize "Packaging the application..."
-  sam package --template-file "$TEMPLATE_FILE" --output-template-file "$OUTPUT_TEMPLATE_FILE" --s3-bucket "$S3_BUCKET" --s3-prefix "$BUILD_DIR" --region "$AWS_REGION"
+  sam package --template-file "$TEMPLATE_FILE" --output-template-file "$OUTPUT_TEMPLATE_FILE" --s3-bucket "$S3_BUCKET_NAME" --s3-prefix "$BUILD_DIR" --region "$AWS_REGION"
 }
 
 deploy() {

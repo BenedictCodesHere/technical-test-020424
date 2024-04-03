@@ -60,8 +60,11 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: function/
-      Handler: index.handler
+      Handler: dist/index.handler
       Runtime: nodejs20.x
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
       Events:
         GetItems:
           Type: Api
@@ -97,6 +100,22 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref Techtest020424Table
 
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${Techtest020424Api}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+
+  ApiId:
+    Description: "API Gateway ID"
+    Value: !Ref Techtest020424Api
+
+  LambdaFunctionArn:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt CrudFunction.Arn
+
+  DynamoDBTableName:
+    Description: "DynamoDB Table Name"
+    Value: !Ref Techtest020424Table
 
 # This template uses AWS SAM to define a serverless API with CRUD endpoints integrating with Lambda functions and a DynamoDB table. 
 # The Lambda functions are assumed to be written in TypeScript and compiled to JavaScript.
