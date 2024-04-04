@@ -1,7 +1,9 @@
+// Import necessary AWS SDK clients and commands
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, GetCommand, PutCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
+// Function to retrieve environment variables
 function getEnvVariable(name: string, defaultValue?: string): string {
   const value = process.env[name];
   if (value === undefined) {
@@ -13,17 +15,10 @@ function getEnvVariable(name: string, defaultValue?: string): string {
   return value;
 }
 
+// Initialize DynamoDBDocumentClient
 const tableName = getEnvVariable("TABLE_NAME", "techtest-table-020424");
-let dynamoDb: DynamoDBDocumentClient;
-
-if (process.env.MOCK_DYNAMODB === 'true') {
-  const { mockClient } = require('aws-sdk-client-mock');
-  const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
-  dynamoDb = mockClient(DynamoDBDocumentClient)();
-} else {
-  const dynamoDBClient = new DynamoDBClient({});
-  dynamoDb = DynamoDBDocumentClient.from(dynamoDBClient);
-}
+const dynamoDBClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(dynamoDBClient);
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const method = event.httpMethod;
