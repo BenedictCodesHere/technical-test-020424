@@ -4,7 +4,9 @@ Parameters:
   RepositoryName:
     Type: String
     Default: techtest-020424-repo
-
+  BranchName:
+      Type: String
+      Default: master
 Resources:
   CodeCommitRepository:
     Type: AWS::CodeCommit::Repository
@@ -84,7 +86,8 @@ Resources:
                 - Name: SourceOutput
               Configuration:
                 RepositoryName: !Ref RepositoryName
-                BranchName: master
+                BranchName: !Ref BranchName
+                PollForSourceChanges: false  # Disable polling
         - Name: Approval
           Actions:
             - Name: ApprovalAction
@@ -184,3 +187,46 @@ Resources:
                 Action:
                   - iam:PassRole
                 Resource: '*'
+
+  EventRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - events.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: PipelineExecutionPermission
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action: codepipeline:StartPipelineExecution
+                  Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:techtest-020424-pipeline
+
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.codecommit
+        detail-type:
+          - 'CodeCommit Repository State Change'
+        resources:
+          - !GetAtt CodeCommitRepository.Arn
+        detail:
+          event:
+            - referenceCreated
+            - referenceUpdated
+          referenceType:
+            - branch
+          referenceName:
+            - !Ref BranchName
+      Targets:
+        - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:techtest-020424-pipeline
+          RoleArn: !GetAtt EventRole.Arn
+          Id: triggerPipeline
