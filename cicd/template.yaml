@@ -124,9 +124,35 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: techtest-020424-stack
-                TemplatePath: BuildOutput::output-template.yaml
-                Capabilities: CAPABILITY_IAM
+                TemplatePath: BuildOutput::packaged.yaml
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                Capabilities: "CAPABILITY_AUTO_EXPAND, CAPABILITY_NAMED_IAM, CAPABILITY_IAM"
 
+  
+  CloudFormationDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudFormationDeployPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'cloudformation:*'
+                  - 'iam:PassRole'
+                  - 'lambda:*'
+                  - 'apigateway:*'
+                  - 'dynamodb:*'
+                  - 's3:*'
+                Resource: '*'
 
   ArtifactStoreBucket:
     Type: AWS::S3::Bucket
