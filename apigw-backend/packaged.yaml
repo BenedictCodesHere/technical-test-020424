@@ -65,7 +65,7 @@ Resources:
   CrudFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://techtest-020424/build/2568fc693f76c183fe466ac2bfd8ef98
+      CodeUri: s3://techtest-020424/build/f1bce518c88876e5278af31f03e18d61
       Handler: dist/index.handler
       Runtime: nodejs20.x
       Environment:

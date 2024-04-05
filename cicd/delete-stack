@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="DELETE-STACK"
+
+colorize() {
+  if [ "$1" == "$LABEL" ]; then
+    printf "${CYAN}== $1 ${NO_COLOR}\n"
+  else
+    printf "${CYAN} $1 ${NO_COLOR}\n"
+  fi
+}
+
+delete_stack() {
+  colorize "Deleting the CloudFormation stack..."
+  aws cloudformation delete-stack --stack-name "$STACK_NAME" --region "$AWS_REGION"
+  aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region "$AWS_REGION"
+  colorize "Stack deletion completed successfully!"
+}
+
+colorize "$LABEL"
+
+# Set the necessary variables
+STACK_NAME="techtest-020424-cicd-stack"
+AWS_REGION="eu-west-2"
+
+delete_stack
