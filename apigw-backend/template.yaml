@@ -56,12 +56,38 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
+  # CrudFunctionRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: lambda.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  #     Policies:
+  #       - PolicyName: DynamoDBCrudPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - dynamodb:GetItem
+  #                 - dynamodb:PutItem
+  #                 - dynamodb:UpdateItem
+  #                 - dynamodb:DeleteItem
+  #               Resource: !GetAtt Techtest020424Table.Arn
+
   CrudFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: function/
       Handler: dist/index.handler
       Runtime: nodejs20.x
+      # Role: !GetAtt CrudFunctionRole.Arn
       Environment:
         Variables:
           TABLE_NAME: !Ref TableName
@@ -97,9 +123,17 @@ Resources:
             Method: delete
             RestApiId: !Ref Techtest020424Api
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Techtest020424Table
-
+        - PolicyName: DynamoDBCrudPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt Techtest020424Table.Arn
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
@@ -117,6 +151,6 @@ Outputs:
     Description: "DynamoDB Table Name"
     Value: !Ref Techtest020424Table
 
-# This template uses AWS SAM to define a serverless API with CRUD endpoints integrating with Lambda functions and a DynamoDB table. 
-# The Lambda functions are assumed to be written in TypeScript and compiled to JavaScript.
-# The necessary IAM roles and permissions are assigned to the Lambda functions using the DynamoDBReadPolicy and DynamoDBCrudPolicy SAM policy templates.
+  # CrudFunctionRoleArn:
+  #   Description: "CRUD Function Role ARN"
+  #   Value: !GetAtt CrudFunctionRole.Arn
