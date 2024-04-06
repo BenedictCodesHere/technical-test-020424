@@ -49,7 +49,7 @@ colorize "$LABEL"
 # variables
 TEMPLATE_FILE="template.yaml"
 OUTPUT_TEMPLATE_FILE="packaged.yaml"
-S3_BUCKET_NAME=$S3_BUCKET_NAME
+S3_BUCKET_NAME="techtest-020424"
 STACK_NAME="apigw-backend-techtest-020424-stack"
 BUILD_DIR="build"
 FUNC_DIR="function"

@@ -108,6 +108,10 @@ Resources:
             Method: delete
             RestApiId:
               Ref: Techtest020424Api
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: Techtest020424Table
     Metadata:
       SamResourceId: CrudFunction
 Outputs:
