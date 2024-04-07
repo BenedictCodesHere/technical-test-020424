@@ -2,15 +2,133 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
-  TableName:
+  BackendStackName:
     Type: String
-    Default: techtest-table-020424
+    Default: apigw-backend-techtest-020424-stack
+    Description: The name of the backend stack which gets deployed.
+  TableName:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: !Sub '/apigw-backend-techtest-020424-stack/TableName'
+    Description: DynamoDB Table Name for the backend architecture.
+  VPCId:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/apigw-backend-techtest-020424-stack/VPCId'
+    Description: The VPC ID where the resources will be deployed.
+  PrivateSubnets:
+    Type: 'AWS::SSM::Parameter::Value<List<String>>'
+    Default: '/apigw-backend-techtest-020424-stack/PrivateSubnets'
+    Description: A list of private subnet IDs for the Lambda function.
+  DynamoDBKMSKeyId:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/apigw-backend-techtest-020424-stack/DynamoDBKMSKeyId'
+    Description: Optional. ARN of an existing KMS key to use for DynamoDB encryption.
+  EnablePointInTimeRecovery:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable Point-in-Time Recovery for DynamoDB table.
 
+Conditions:
+  # CreateKMSKey: !Equals [!Ref DynamoDBKMSKeyId, ""]
+  IsPITREnabled: !Equals [!Ref EnablePointInTimeRecovery, "true"]
+    
 Resources:
+  # Define a simple route table for the private subnets, to make sure the main one isn't assigned and to allow the DynamoDB endpoint to reference the route table directly in its definition.
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPCId
+  # Associations of the Route Table with each Private Subnet
+  PrivateSubnetRouteTableAssociationOne:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Select [0, !Ref PrivateSubnets]
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationTwo:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Select [1, !Ref PrivateSubnets]
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationThree:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Select [2, !Ref PrivateSubnets]
+      RouteTableId: !Ref PrivateRouteTable
+        
+  # Security Groups and Ingress/Egress rules.
+  # Ingress/egress had to be defined as separate resources to avoid circular dependency issue. 
+  # (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-securitygroup.html)
+
+  LambdaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for Lambda function
+      VpcId: !Ref VPCId
+
+  LambdaToApiGatewayEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref ApiGatewayVpceSecurityGroup
+
+  DynamoDBEndpointSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Allow inbound from Lambda function
+      VpcId: !Ref VPCId
+
+  LambdaToDynamoDBEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref DynamoDBEndpointSecurityGroup
+
+  ApiGatewayVpceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for API Gateway VPC Endpoint allowing ingress from Lambda'
+      VpcId: !Ref VPCId
+
+  LambdaToApiGatewayIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref ApiGatewayVpceSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  ApiGatewayVpcEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcId: !Ref VPCId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.execute-api"
+      VpcEndpointType: "Interface"
+      SubnetIds: !Ref PrivateSubnets
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref ApiGatewayVpceSecurityGroup
+
+  
+
   Techtest020424Api:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
+      EndpointConfiguration:
+        Type: PRIVATE
+        VPCEndpointIds:
+          - !Ref ApiGatewayVpcEndpoint
       DefinitionBody:
         swagger: "2.0"
         paths:
@@ -41,6 +159,16 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+        x-amazon-apigateway-policy: 
+          Version: "2012-10-17"
+          Statement: 
+            - Effect: "Allow"
+              Principal: "*"
+              Action: "execute-api:Invoke"
+              Resource: "execute-api:/*/*/*"
+              Condition: 
+                StringEquals:
+                  aws:sourceVpce: !Ref ApiGatewayVpcEndpoint
 
   Techtest020424Table:
     Type: AWS::DynamoDB::Table
@@ -55,31 +183,24 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !Ref DynamoDBKMSKeyId
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsPITREnabled, true, false]
 
-  # CrudFunctionRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service: lambda.amazonaws.com
-  #           Action: sts:AssumeRole
-  #     ManagedPolicyArns:
-  #       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  #     Policies:
-  #       - PolicyName: DynamoDBCrudPolicy
-  #         PolicyDocument:
-  #           Version: '2012-10-17'
-  #           Statement:
-  #             - Effect: Allow
-  #               Action:
-  #                 - dynamodb:GetItem
-  #                 - dynamodb:PutItem
-  #                 - dynamodb:UpdateItem
-  #                 - dynamodb:DeleteItem
-  #               Resource: !GetAtt Techtest020424Table.Arn
+  DynamoDBVpcEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref VPCId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      VpcEndpointType: 'Gateway'
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+  
+
+ 
 
   CrudFunction:
     Type: AWS::Serverless::Function
@@ -87,10 +208,19 @@ Resources:
       CodeUri: function/
       Handler: dist/index.handler
       Runtime: nodejs20.x
-      # Role: !GetAtt CrudFunctionRole.Arn
+      Timeout: 5
+      VpcConfig:
+        SubnetIds: !Ref PrivateSubnets
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
       Environment:
         Variables:
           TABLE_NAME: !Ref TableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+        - KMSDecryptPolicy:
+            KeyId: !Ref DynamoDBKMSKeyId
       Events:
         GetItems:
           Type: Api
@@ -122,26 +252,8 @@ Resources:
             Path: /items/{id}
             Method: delete
             RestApiId: !Ref Techtest020424Api
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Techtest020424Table
+
 Outputs:
   ApiUrl:
-    Description: "API Gateway endpoint URL"
+    Description: "API Gateway endpoint URL for prod stage"
     Value: !Sub "https://${Techtest020424Api}.execute-api.${AWS::Region}.amazonaws.com/prod/"
-
-  ApiId:
-    Description: "API Gateway ID"
-    Value: !Ref Techtest020424Api
-
-  LambdaFunctionArn:
-    Description: "Lambda Function ARN"
-    Value: !GetAtt CrudFunction.Arn
-
-  DynamoDBTableName:
-    Description: "DynamoDB Table Name"
-    Value: !Ref Techtest020424Table
-
-  # CrudFunctionRoleArn:
-  #   Description: "CRUD Function Role ARN"
-  #   Value: !GetAtt CrudFunctionRole.Arn
