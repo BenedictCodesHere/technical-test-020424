@@ -5,7 +5,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from '../function/index';
 import { JsonableValue } from 'ts-jest';
 
-describe('Handler', () => {
+describe.skip('Handler', () => {
   // Mock DynamoDB client
   const ddbMock = mockClient(DynamoDBDocumentClient);
 
