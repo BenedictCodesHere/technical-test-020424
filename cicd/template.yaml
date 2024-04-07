@@ -213,6 +213,7 @@ Resources:
                 Resource: 
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/VPCId"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/PrivateSubnets"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/DynamoDBKMSKeyId"
               - Effect: Allow
                 Action: 
                   - "ec2:DeleteSecurityGroup"
