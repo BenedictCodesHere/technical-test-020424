@@ -8,8 +8,8 @@ Parameters:
     Type: String
     Default: master
   TableName:
-    Type: String
-    Default: techtest-table-020424
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/apigw-backend-techtest-020424-stack/TableName'
   BackendStackName:
     Type: String
     Default: apigw-backend-techtest-020424-stack
@@ -214,6 +214,7 @@ Resources:
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/VPCId"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/PrivateSubnets"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/DynamoDBKMSKeyId"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/TableName"
               - Effect: Allow
                 Action: 
                   - "ec2:DeleteSecurityGroup"
@@ -280,7 +281,7 @@ Resources:
                   - cloudformation:DescribeStacks
                   - cloudformation:DeleteStack
                   - cloudformation:UpdateStack
-                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/apigw-backend-techtest-020424-stack/*
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${BackendStackName}/*
               - Effect: Allow
                 Action:
                   - s3:GetObject
