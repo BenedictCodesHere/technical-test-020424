@@ -10,11 +10,17 @@ beforeEach(() => {
   ddbMock.reset();
 });
 
+// Clean up after all tests in this suite are done
+afterEach(() => {
+  ddbMock.restore();
+});
+
+
 describe('get items', () => {
   it('should retrieve all items', async () => {
     // Setup your mock response
     ddbMock.on(ScanCommand).resolves({
-      Items: [{ id: '1', data: 'test data' }],
+      Items: [{ id: '100', data: 'test data' }],
     });
 
     // Define the API Gateway event to simulate a GET /items request

@@ -9,13 +9,13 @@ describe('Handler', () => {
   // Mock DynamoDB client
   const ddbMock = mockClient(DynamoDBDocumentClient);
 
-  beforeAll(() => {
+  beforeEach(() => {
     // Resets the mock before each test suite
     ddbMock.reset();
   });
 
   // Clean up after all tests in this suite are done
-  afterAll(() => {
+  afterEach(() => {
     ddbMock.restore();
   });
 
