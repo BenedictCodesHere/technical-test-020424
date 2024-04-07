@@ -13,6 +13,10 @@ Parameters:
   BackendStackName:
     Type: String
     Default: apigw-backend-techtest-020424-stack
+  VPCId:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: '/apigw-backend-techtest-020424-stack/VPCId'
+    Description: The VPC ID where the resources will be deployed.
 
 Resources:
   CodeCommitRepository:
@@ -95,15 +99,6 @@ Resources:
                 RepositoryName: !Ref RepositoryName
                 BranchName: !Ref BranchName
                 PollForSourceChanges: false
-        - Name: Approval
-          Actions:
-            - Name: ApprovalAction
-              ActionTypeId:
-                Category: Approval
-                Owner: AWS
-                Provider: Manual
-                Version: '1'
-              RunOrder: 1
         - Name: Build
           Actions:
             - Name: Build
@@ -212,6 +207,34 @@ Resources:
                   - 's3:GetObject'
                 Resource:
                   - !Sub 'arn:aws:s3:::${ArtifactStoreBucket}/*'
+              - Effect: Allow
+                Action:
+                  - "ssm:GetParameters"
+                Resource: 
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/VPCId"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${BackendStackName}/PrivateSubnets"
+              - Effect: Allow
+                Action: 
+                  - "ec2:DeleteSecurityGroup"
+                  - "ec2:CreateSecurityGroup"
+                Resource: 
+                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*"
+                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${VPCId}"
+              - Effect: Allow
+                Action:
+                  - "ec2:DescribeSecurityGroups"
+                  - "ec2:RevokeSecurityGroupEgress"
+                  - "ec2:RevokeSecurityGroupIngress"
+                  - "ec2:AuthorizeSecurityGroupEgress"
+                  - "ec2:AuthorizeSecurityGroupIngress"
+                  - "ec2:CreateVpcEndpoint"
+                  - "ec2:DescribeVpcEndpoints"
+                  - "ec2:*"
+                Resource: "*"
+              - Effect: Allow
+                Action: 
+                  - "kms:*"
+                Resource: "*"
                 
 
   ArtifactStoreBucket:
