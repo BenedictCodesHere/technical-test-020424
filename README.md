@@ -8,13 +8,15 @@ Technical interview test for a fintech company, emphasis on Serverless infrastru
 ## Structure
 
 ## Backend Stack
-The `apigw-backend` folder contains a `function` folder with the lambda code, a `build-package-deploy` script that I was using to deploy the template as a standalone stack, a `function` folder which contains the function and its code.
+The `apigw-backend` folder contains a `function` folder with the lambda code, a `build-package-deploy` script that I was using to deploy the template as a standalone stack, a `function` folder which contains the function and its code. The `bin` folder also contains the script to create a bucket which the SAM deployment relies on as part of the package step.
 
 The `buildspec.yml` and the `template.yaml` for the backend stack are also at the root of the `apigw-backend` folder.
 
 The `tests` folders are a work in progress, the suites are having some unintended side effects where they make actual calls to the backend infrastructure if it is deployed, rather than mocking them as desired. I have included them for reference, and to show the direction I would take, where I would add a `test` phase into the pipeline.
 
 I have tested this architecture in the cloud by creating test events for the lambda, and with the API gateway test functionality too.
+
+
 
 
 ## CI/CD Stack
