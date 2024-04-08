@@ -28,3 +28,9 @@ The architecture for the backend stack is private. The API is unable to be acces
 I did initially create the architecture as a public architecture, and confirmed via Postman testing that it worked.
 
 You can find the public template in `/apigw-backend/public-template.yaml`. Please note that for the build to work, the `template.yaml` is the file referenced in that folder.
+
+
+## Github Repo
+If you would prefer to view this on Github, here is the repo link.
+
+https://github.com/BenedictCodesHere/technical-test-020424
