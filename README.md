@@ -4,6 +4,11 @@ Technical interview test for a fintech company, emphasis on Serverless infrastru
 
 ![Architectural Diagram](./assets/architecture.png)
 
+## Diagram Contents
+The diagram contains: 
+- VPC architecture with private subnet and resources
+- CloudFormation stacks subdivided into Parameters, Resources, Outputs
+- CI/CD pipeline architecture
 
 ## Structure
 
@@ -16,8 +21,22 @@ The `tests` folders are a work in progress, the suites are having some unintende
 
 I have tested this architecture in the cloud by creating test events for the lambda, and with the API gateway test functionality too.
 
+## CodeCommit
+The key files that are necessary to be added to the CodeCommit repo are:
+- `template.yaml`
+- `buildspec.yml`
+- `/function` folder, containing:
+    - `index.ts`
+    - `package.json`
+    - `tsconfig.json`
 
+These are the files that I pushed to the CodeCommit repo, to the `master` branch.
 
+NOTE: The `master` branch needs to be created, as the default branch when files are added at first is `main`.
+Creating the `master` branch can be done in the typical Git workflow of:
+- Cloning the repo locally
+- `git checkout -b master`
+- `git push` at which point you will likely be prompted to `--set upstream origin master` if you didn't include this in the `git push` command.
 
 ## CI/CD Stack
 The `cicd` folder contains a `create-changeset` script which I was using primarily to update the `cicd` pipeline when I made changes. It also contains a `deploy` script for the initial deployment.
