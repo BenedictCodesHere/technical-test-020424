@@ -1,5 +1,0 @@
-# Exclude node_modules directory
-function/node_modules/
-
-# Exclude compiled JavaScript files
-function/dist/
