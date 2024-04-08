@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: latest
+    commands:
+      - cd function
+      - npm install
+      - cd ..
+  build:
+    commands:
+      - cd function
+      - npm run build
+      - cp -r dist/ ../
+      - cd ..
+  post_build:
+    commands:
+      - aws cloudformation package --template-file template.yaml --s3-bucket techtest-020424-artifact-store --output-template-file packaged.yaml
+artifacts:
+  files:
+    - packaged.yaml
+    - dist/**/*
+  base-directory: ./
