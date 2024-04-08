@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
+# Parameters for the template. Most of these are retrieved via Systems Manager, stored in the Parameter Store.
+# This helps anonymise most of the parameters.
+# Defaults have been added as there is the option to add your own parameters with deployment scripts, using --parameter-overrides
 Parameters:
   BackendStackName:
     Type: String
@@ -35,7 +38,10 @@ Conditions:
   IsPITREnabled: !Equals [!Ref EnablePointInTimeRecovery, "true"]
     
 Resources:
-  # Define a simple route table for the private subnets, to make sure the main one isn't assigned and to allow the DynamoDB endpoint to reference the route table directly in its definition.
+  # This section defines a route table and associates it with each of the three private subnets being pulled in as a parameter.
+  # If deploying in the default VPC, this architecture makes sure that the DynamoDB endpoint can reference the route table directly in its definition.
+  # If there was a different number of subnets desired, then this could be instead referenced from a cross-stack where the customized networking gets
+  # deployed and then used as Outputs for this stack to reference.
   PrivateRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -62,7 +68,7 @@ Resources:
   # Security Groups and Ingress/Egress rules.
   # Ingress/egress had to be defined as separate resources to avoid circular dependency issue. 
   # (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-securitygroup.html)
-
+  # They are the security groups and rules interacting between the resources of the API Gateway VPC Endpoint, Lambda, and DynamoDB VPC Endpoint.
   LambdaSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -120,7 +126,7 @@ Resources:
         - !Ref ApiGatewayVpceSecurityGroup
 
   
-
+  # Here is where the private API is defined.
   Techtest020424Api:
     Type: AWS::Serverless::Api
     Properties:
@@ -159,6 +165,7 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CrudFunction.Arn}/invocations
+        #  This was required due to the configuration being PRIVATE, it required this gateway policy, allowing the VPC endpoint for the gateway to invoke it.
         x-amazon-apigateway-policy: 
           Version: "2012-10-17"
           Statement: 
@@ -170,6 +177,8 @@ Resources:
                 StringEquals:
                   aws:sourceVpce: !Ref ApiGatewayVpcEndpoint
 
+  # Here is the DynamoDB table, note the conditional for setting PITR. Currently the architecture has a KMS Master Key as the Server Side Encryption for the table,
+  # with the key ID being pulled in via the parameter at the top of the template.
   Techtest020424Table:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -186,10 +195,13 @@ Resources:
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
+        # Omit this line below if you aren't pulling a KMS key in via a parameter and you just want to use an AWS-managed KMS key, not a CMK.
         KMSMasterKeyId: !Ref DynamoDBKMSKeyId
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: !If [IsPITREnabled, true, false]
 
+  # Gateway VPC endpoint for the DynamoDB table. Routes have been added above in the routing for the private subnets where the lambda is deployed, to ensure
+  # that the lambda can reach this endpoint.
   DynamoDBVpcEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
@@ -201,14 +213,18 @@ Resources:
   
 
  
-
+  # The lambda function definition. It includes SAM policy permissions
   CrudFunction:
     Type: AWS::Serverless::Function
     Properties:
+      # Requires that the code has a separate function folder. This function folder is where the TypeScript function code and the relevant build script sits.
       CodeUri: function/
+      # References the index.handler in the /function/dist folder. File itself is called index.js but the handler function sits in that file.
       Handler: dist/index.handler
       Runtime: nodejs20.x
+      # Extended timeout as I was running into timeout issues. Have left it in for illustrative purposes as the default should work anyway now.
       Timeout: 5
+      # Deploys into multiple subnets
       VpcConfig:
         SubnetIds: !Ref PrivateSubnets
         SecurityGroupIds:
@@ -216,6 +232,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref TableName
+      #  SAM policy permissions for interacting with the table and decrypting the KMS key.
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TableName
@@ -253,6 +270,7 @@ Resources:
             Method: delete
             RestApiId: !Ref Techtest020424Api
 
+# Outputs the ApiUrl for easy reference, for testing or general usage.
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL for prod stage"

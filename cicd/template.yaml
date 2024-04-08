@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
+# Parameters for the template. Some of these are retrieved via Systems Manager, stored in the Parameter Store.
+# This helps anonymise most of the parameters.
+# Defaults have been added as there is the option to add your own parameters with deployment scripts, using --parameter-overrides
 Parameters:
   RepositoryName:
     Type: String
@@ -25,6 +28,7 @@ Resources:
       RepositoryName: !Ref RepositoryName
       RepositoryDescription: Repository for the techtest-020424 application
 
+  # Requires a buildspec.yml be in the root of the CodeCommit repository branch that the changes are being made from.
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -41,6 +45,7 @@ Resources:
       Artifacts:
         Type: CODEPIPELINE
 
+  # IAM Role for the CodeBuild step with relevant permissions
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -72,7 +77,9 @@ Resources:
                 Action:
                   - codecommit:GitPull
                 Resource: !Sub ${CodeCommitRepository.Arn}
-
+  #  The definition of the pipeline.
+  # Depends on the creation of the ArtifactStoreBucket succeeding.
+  #  Contains Source, Build, and Deploy stages of the pipeline.
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn: ArtifactStoreBucket
@@ -98,6 +105,7 @@ Resources:
               Configuration:
                 RepositoryName: !Ref RepositoryName
                 BranchName: !Ref BranchName
+                #  Setting this to false ensures that the event trigger is what causes the pipeline to start, instead of the pipeline polling the repo for changes.
                 PollForSourceChanges: false
         - Name: Build
           Actions:
@@ -128,6 +136,7 @@ Resources:
                 StackName: !Ref BackendStackName
                 TemplatePath: BuildOutput::packaged.yaml
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                # Has to be written comma-separated like below, was running into issues (missing capabilities) if not precisely like that.
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
 
   CloudFormationDeployRole:
@@ -231,6 +240,8 @@ Resources:
                   - "ec2:AuthorizeSecurityGroupIngress"
                   - "ec2:CreateVpcEndpoint"
                   - "ec2:DescribeVpcEndpoints"
+                  # Eventually I added this part, wildcarding the actions as I was running into too many granular errors in the timescale. 
+                  # In future I would remove this to make it more along the Principle of Least Privilege.
                   - "ec2:*"
                 Resource: "*"
               - Effect: Allow
@@ -238,7 +249,7 @@ Resources:
                   - "kms:*"
                 Resource: "*"
                 
-
+  # Bucket where the build artifacts get stored during the pipeline.
   ArtifactStoreBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -246,6 +257,7 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
+  # IAM Role for the CodePipeline pipeline itself.
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -295,6 +307,7 @@ Resources:
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/apigw-backend-techtest-020424-*
                   - !Sub arn:aws:iam::${AWS::AccountId}:role/techtest-*
 
+  # IAM Role for the event which triggers the pipeline, namely an update or creation of changes in the master branch.
   EventRole:
     Type: AWS::IAM::Role
     Properties:
@@ -315,6 +328,7 @@ Resources:
                 Action: codepipeline:StartPipelineExecution
                 Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:techtest-020424-pipeline
 
+  # The rule defining that on creation or update of the reference, the master branch, the target is the pipeline which gets triggered.
   EventRule:
     Type: AWS::Events::Rule
     Properties:
@@ -335,5 +349,6 @@ Resources:
             - !Ref BranchName
       Targets:
         - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:techtest-020424-pipeline
+          # References the EventRole so it has permissions to actually start the pipeline execution
           RoleArn: !GetAtt EventRole.Arn
           Id: triggerPipeline
